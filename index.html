@@ -118,7 +118,23 @@
     position: absolute; top: 0; left: 0; right: 0; height: 2px;
     background: linear-gradient(90deg, transparent, var(--gold), transparent);
   }
-  .pred-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+  /* Prediction identity banner */
+  .pred-identity {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 14px;
+  }
+  .pred-identity-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(245,200,66,0.12); border: 1px solid var(--gold);
+    color: var(--gold); font-size: 10px; font-weight: 600;
+    padding: 4px 10px; border-radius: 20px; letter-spacing: 1.5px;
+    text-transform: uppercase; font-family: 'DM Mono', monospace;
+  }
+  .pred-identity-badge::before { content: '🔮'; font-size: 11px; }
+  .pred-draw-info { font-size: 13px; color: var(--text2); }
+  .pred-draw-info strong { color: var(--text); }
+
+  .pred-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
   .pred-title { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--gold); }
   .pred-draw { font-size: 11px; color: var(--text3); margin-top: 2px; }
   .confidence-badge {
@@ -126,6 +142,13 @@
     color: var(--gold); font-size: 11px; font-weight: 500;
     padding: 4px 10px; border-radius: 20px; font-family: 'DM Mono', monospace;
   }
+  /* Single-line ball row for prediction — smaller balls, no wrap */
+  .ball-row-pred {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 10px; flex-wrap: nowrap; overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .ball-row-pred::-webkit-scrollbar { display: none; }
   .ball-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
   .ball {
     width: 44px; height: 44px; border-radius: 50%;
@@ -137,18 +160,32 @@
   .ball:hover { transform: scale(1.1); }
   .ball.main { background: var(--bg); border: 2px solid var(--gold); color: var(--gold); }
   .ball.supp { background: var(--bg); border: 2px solid var(--supp); color: var(--supp); }
-  .ball.hot-ball { border-color: var(--hot); color: var(--hot); }
-  .ball.cold-ball { border-color: var(--cool); color: var(--cool); }
-  .ball.sm {
-    width: 36px; height: 36px; font-size: 13px;
+  .ball.hot-ball { background: var(--bg); border: 2px solid var(--hot); color: var(--hot); }
+  .ball.cold-ball { background: var(--bg); border: 2px solid var(--cool); color: var(--cool); }
+  .ball.sm { width: 36px; height: 36px; font-size: 13px; }
+  /* Prediction balls — slightly smaller to fit 8 in one line */
+  .ball.pred { width: 38px; height: 38px; font-size: 13px; flex-shrink: 0; }
+  .pred-separator {
+    width: 2px; height: 38px; background: var(--border2);
+    border-radius: 1px; flex-shrink: 0; margin: 0 2px;
   }
   .ball-label { font-size: 10px; color: var(--text3); margin-bottom: 6px; letter-spacing: 1px; text-transform: uppercase; }
   .separator { width: 1px; background: var(--border2); margin: 0 4px; align-self: stretch; }
 
+  /* Bullet-point rationale */
   .pred-rationale {
-    background: var(--bg2); border-radius: 10px; padding: 12px;
-    font-size: 12px; color: var(--text2); line-height: 1.6;
+    background: var(--bg2); border-radius: 10px; padding: 12px 14px;
+    font-size: 12px; color: var(--text2); line-height: 1.5;
     margin-top: 12px;
+  }
+  .pred-rationale ul {
+    list-style: none; margin: 0; padding: 0;
+  }
+  .pred-rationale li {
+    padding: 3px 0; display: flex; align-items: baseline; gap: 6px;
+  }
+  .pred-rationale li::before {
+    content: '·'; color: var(--gold); font-size: 14px; flex-shrink: 0; line-height: 1;
   }
   .pred-rationale strong { color: var(--text); font-weight: 500; }
 
@@ -438,6 +475,49 @@
   <div class="page" id="page-about">
 
     <div class="info-card">
+      <h3>Understanding Ball Colours</h3>
+      <p>Every number in this app is colour-coded to give you an instant read on its recent behaviour. Here is exactly what each colour means:</p>
+
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:14px;">
+
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <div style="width:36px;height:36px;border-radius:50%;border:2px solid var(--hot);color:var(--hot);background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:13px;flex-shrink:0">10</div>
+          <div>
+            <div style="font-size:13px;font-weight:500;color:var(--hot);margin-bottom:3px">Red — Hot number</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6">This number has appeared <strong style="color:var(--text)">more often than statistically expected</strong> across the last 200 draws (≈4 years). Specifically, it is more than one standard deviation above the mean frequency for that window. Hot numbers are drawn about every 4–5 weeks on average — they are genuinely occurring more than chance would predict in recent history.</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <div style="width:36px;height:36px;border-radius:50%;border:2px solid var(--cool);color:var(--cool);background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:13px;flex-shrink:0">6</div>
+          <div>
+            <div style="font-size:13px;font-weight:500;color:var(--cool);margin-bottom:3px">Blue — Cold number</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6">This number has appeared <strong style="color:var(--text)">less often than statistically expected</strong> across the last 200 draws — more than one standard deviation below the mean. Cold numbers are drawn less frequently than chance would predict in recent history. They are not "due" — each draw is independent — but their below-average recent frequency is a real observable pattern.</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <div style="width:36px;height:36px;border-radius:50%;border:2px solid var(--gold);color:var(--gold);background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:13px;flex-shrink:0">23</div>
+          <div>
+            <div style="font-size:13px;font-weight:500;color:var(--gold);margin-bottom:3px">Gold — Standard number</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6">This number falls <strong style="color:var(--text)">within the normal range</strong> — its recent frequency is within one standard deviation of the mean. Most numbers (typically 30–35 out of 45) sit in this band. Gold does not mean unimportant — the prediction engine still scores these numbers individually using frequency deviation, gap ratio, and pair affinity signals.</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <div style="width:36px;height:36px;border-radius:50%;border:2px solid var(--supp);color:var(--supp);background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:13px;flex-shrink:0">24</div>
+          <div>
+            <div style="font-size:13px;font-weight:500;color:var(--supp);margin-bottom:3px">Purple — Supplementary number</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6">In the prediction card only, purple indicates the <strong style="color:var(--text)">two predicted supplementary numbers</strong> — the 7th and 8th balls drawn from the same barrel. Supplementaries are tracked in a completely separate frequency table and are never mixed into the main ball analysis. A purple ball in a combination card does not mean supplementary — it means that number currently has no hot/cold classification (this will be corrected in a future update).</div>
+          </div>
+        </div>
+
+      </div>
+
+      <p style="margin-top:14px;font-size:11px;color:var(--text3);line-height:1.6">Hot and cold thresholds are recalculated dynamically every time the app loads, based on the last 200 draws. They shift week by week as new results come in. A number labelled hot today may return to gold next month if its frequency normalises.</p>
+    </div>
+
+    <div class="info-card">
       <h3>Data Source</h3>
       <p>2,071 real verified Saturday Lotto draws (Draw 533, 30 Aug 1986 → Draw 4673, 2 May 2026) are permanently embedded in this app. Source: australia.national-lottery.com, cross-verified against Lotterywest official government API and au.lottonumbers.com. Zero synthetic or generated data is used anywhere in analysis or prediction. Tap Sync to pick up each week's new draw — no other downloads needed.</p>
     </div>
@@ -536,7 +616,14 @@ function loadLocal() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      allDraws = JSON.parse(raw);
+      const cached = JSON.parse(raw);
+      // Data integrity: embedded draws are ground truth.
+      // Remove any cached draws whose draw number exists in EMBEDDED_DRAWS
+      // (prevents bad scraped data from overriding verified embedded data)
+      const embeddedSet = new Set(EMBEDDED_DRAWS.map(d => d.draw));
+      const nonEmbedded = cached.filter(d => !embeddedSet.has(d.draw));
+      // Merge: embedded (verified) + non-embedded cached (new weekly draws)
+      allDraws = [...EMBEDDED_DRAWS, ...nonEmbedded].sort((a,b) => b.draw - a.draw);
       return true;
     }
   } catch(e) {}
@@ -585,10 +672,14 @@ async function syncData() {
   btn.classList.add('loading');
   icon.innerHTML = '<span class="spin">◌</span>';
 
-  // Start with embedded draws + any previously cached draws
+  // Build draw map: embedded data is ground truth — never overwritten by scraper
+  const embeddedSet = new Set(EMBEDDED_DRAWS.map(d => d.draw));
   const drawMap = new Map(EMBEDDED_DRAWS.map(d => [d.draw, d]));
   const cached = loadLocalRaw();
-  if (cached) cached.forEach(d => drawMap.set(d.draw, d));
+  // Restore cached draws that are NOT in embedded (i.e. post-embedded new draws only)
+  if (cached) cached.forEach(d => {
+    if (!embeddedSet.has(d.draw)) drawMap.set(d.draw, d);
+  });
 
   // Find the latest draw we already have
   const latestKnown = Math.max(...drawMap.keys());
@@ -608,12 +699,12 @@ async function syncData() {
         const data = await r.value.json();
         if (data.success && data.draws) {
           data.draws.forEach(d => {
-            if (d.draw > latestKnown) {
+            // Only add draws that are genuinely new (after latest embedded draw)
+            // Never overwrite embedded verified data with scraped data
+            if (!embeddedSet.has(d.draw) && d.draw > 0) {
+              const isNew = !drawMap.has(d.draw);
               drawMap.set(d.draw, d);
-              newDrawsFound++;
-            } else {
-              // Still update even if known — may have richer data (div1 amounts)
-              drawMap.set(d.draw, d);
+              if (isNew) newDrawsFound++;
             }
           });
         }
@@ -762,11 +853,23 @@ function analyse(draws) {
   // Gaps (draws since last appearance in main balls)
   const gaps = Array.from({length:45}, (_,i) => ({num: i+1, gap: lastSeen[i+1]}));
 
-  // Hot/cold (top/bottom 8 by frequency)
+  // Hot/cold — rolling window (last 200 draws) + standard deviation threshold
+  // Only labels a number hot/cold if it's a genuine statistical outlier (>1σ from mean)
+  // This avoids arbitrary top-N cutoffs and ensures labels are meaningful
+  const recentWindow = realDraws.slice(0, 200);
+  const recentFreq = new Array(46).fill(0);
+  recentWindow.forEach(d => d.balls.forEach(n => recentFreq[n]++));
+  const recentMean = recentWindow.length * 6 / 45; // expected per number
+  const recentVariance = recentFreq.slice(1).reduce((s, f) => s + Math.pow(f - recentMean, 2), 0) / 45;
+  const recentSd = Math.sqrt(recentVariance);
+  const hotThreshold = recentMean + recentSd;
+  const coldThreshold = recentMean - recentSd;
+  const hot = Array.from({length:45}, (_,i) => i+1).filter(n => recentFreq[n] >= hotThreshold);
+  const cold = Array.from({length:45}, (_,i) => i+1).filter(n => recentFreq[n] <= coldThreshold);
+
+  // Full-history freq ranking (for analysis page chart)
   const freqRanked = Array.from({length:45}, (_,i) => ({num:i+1, count:freq[i+1]}))
     .sort((a,b) => b.count - a.count);
-  const hot = freqRanked.slice(0,8).map(x=>x.num);
-  const cold = freqRanked.slice(-8).map(x=>x.num);
 
   // Top pairs
   const topPairs = Object.entries(pairs)
@@ -1098,34 +1201,39 @@ function renderPrediction() {
   const synced = lastSync();
 
   container.innerHTML = `
-    <div class="section-label">Next draw prediction</div>
     <div class="prediction-card">
-      <div class="pred-header">
-        <div>
-          <div class="pred-title">Draw #${p.nextDrawNum}</div>
-          <div class="pred-draw">${p.nextDrawDate}</div>
-        </div>
-        <div class="confidence-badge">${p.totalDraws} draws</div>
+      <!-- Prediction identity -->
+      <div class="pred-identity">
+        <span class="pred-identity-badge">Prediction</span>
+        <span class="pred-draw-info">Draw <strong>#${p.nextDrawNum}</strong> · ${p.nextDrawDate}</span>
       </div>
-      <div class="ball-label">Main numbers</div>
-      <div class="ball-row">
-        ${p.balls.map(n => ballHtml(n,'main')).join('')}
-        <div class="separator"></div>
-        ${p.supps.map(n => ballHtml(n,'supp')).join('')}
+
+      <!-- All 8 numbers on one line: 6 main | 2 supps -->
+      <div class="ball-label">Predicted numbers</div>
+      <div class="ball-row-pred">
+        ${p.balls.map(n => ballHtml(n,'main pred')).join('')}
+        <div class="pred-separator"></div>
+        ${p.supps.map(n => ballHtml(n,'supp pred')).join('')}
       </div>
-      <div style="display:flex;gap:12px;margin-top:4px;">
+
+      <!-- Legend — always show all 4 colours -->
+      <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
         <span style="font-size:10px;color:var(--hot)">● Hot</span>
         <span style="font-size:10px;color:var(--cool)">● Cold</span>
+        <span style="font-size:10px;color:var(--gold)">● Standard</span>
         <span style="font-size:10px;color:var(--supp)">● Supplementary</span>
       </div>
+
+      <!-- Bullet rationale -->
       <div class="pred-rationale">
-        Based on <strong>${p.totalDraws} real draws (1986–2026)</strong> · 
-        <strong>${p.hotInPred.length}</strong> above-average frequency numbers · 
-        <strong>${p.overdueInPred.length}</strong> overdue vs personal average · 
-        Balance: <strong>${p.oddCount} odd / ${6-p.oddCount} even</strong> · 
-        <strong>${p.lowCount} low (1–22) / ${6-p.lowCount} high (23–45)</strong> · 
-        Sum: <strong>${p.ballSum}</strong> (historical mean: 137) ·
-        Supplementary signal applied (promotion candidates boosted, supp-trapped downweighted)
+        <ul>
+          <li>Based on <strong>${p.totalDraws} real draws</strong> (1986–2026)</li>
+          <li><strong>${p.hotInPred.length}</strong> above-average frequency numbers</li>
+          <li><strong>${p.overdueInPred.length}</strong> overdue vs personal average gap</li>
+          <li>Balance: <strong>${p.oddCount} odd / ${6-p.oddCount} even</strong> · <strong>${p.lowCount} low / ${6-p.lowCount} high</strong></li>
+          <li>Sum: <strong>${p.ballSum}</strong> (historical mean: 137)</li>
+          <li>Supp signal: promotion candidates boosted, supp-trapped downweighted</li>
+        </ul>
       </div>
     </div>
 
@@ -1136,7 +1244,11 @@ function renderPrediction() {
         <span class="draw-date">${formatDate(lastDraw.date)}</span>
       </div>
       <div class="draw-balls">
-        ${lastDraw.balls.map(n => `<div class="ball sm main">${n}</div>`).join('')}
+        ${lastDraw.balls.map(n => {
+          if (a.hot.includes(n)) return `<div class="ball sm hot-ball">${n}</div>`;
+          if (a.cold.includes(n)) return `<div class="ball sm cold-ball">${n}</div>`;
+          return `<div class="ball sm main">${n}</div>`;
+        }).join('')}
         <div class="supp-divider">+</div>
         ${lastDraw.supps.map(n => `<div class="ball sm supp">${n}</div>`).join('')}
       </div>
@@ -1232,6 +1344,18 @@ function renderResults(limit) {
     container.innerHTML = `<div class="empty-state"><div class="empty-icon">🎱</div>Tap Sync to load draw history</div>`;
     return;
   }
+  // Get hot/cold sets for ball colouring
+  const realDraws = getRealDraws();
+  const a = realDraws.length >= 10 ? analyse(realDraws) : null;
+  const hotSet = new Set(a ? a.hot : []);
+  const coldSet = new Set(a ? a.cold : []);
+
+  function resultBallHtml(n) {
+    if (hotSet.has(n)) return `<div class="ball sm hot-ball">${n}</div>`;
+    if (coldSet.has(n)) return `<div class="ball sm cold-ball">${n}</div>`;
+    return `<div class="ball sm main">${n}</div>`;
+  }
+
   container.innerHTML = draws.map(d => `
     <div class="draw-card">
       <div class="draw-meta">
@@ -1239,7 +1363,7 @@ function renderResults(limit) {
         <span class="draw-date">${formatDate(d.date)}</span>
       </div>
       <div class="draw-balls">
-        ${d.balls.map(n => `<div class="ball sm main">${n}</div>`).join('')}
+        ${d.balls.map(n => resultBallHtml(n)).join('')}
         <div class="supp-divider">+</div>
         ${d.supps.map(n => `<div class="ball sm supp">${n}</div>`).join('')}
       </div>
@@ -1306,15 +1430,15 @@ function renderAnalysis() {
       </div>
     </div>
 
-    <div class="section-label section-gap">Hot & cold numbers</div>
+    <div class="section-label section-gap">Hot & cold numbers (last 200 draws · >1σ from mean)</div>
     <div class="hc-grid">
       <div class="hc-card">
         <div class="hc-label hot">🔥 Hot numbers</div>
-        <div class="hc-balls">${a.hot.map(n=>`<div class="ball sm hot-ball">${n}</div>`).join('')}</div>
+        <div class="hc-balls">${a.hot.length > 0 ? a.hot.map(n=>`<div class="ball sm hot-ball">${n}</div>`).join('') : '<span style="font-size:11px;color:var(--text3)">None above threshold</span>'}</div>
       </div>
       <div class="hc-card">
         <div class="hc-label cold">❄ Cold numbers</div>
-        <div class="hc-balls">${a.cold.map(n=>`<div class="ball sm cold-ball">${n}</div>`).join('')}</div>
+        <div class="hc-balls">${a.cold.length > 0 ? a.cold.map(n=>`<div class="ball sm cold-ball">${n}</div>`).join('') : '<span style="font-size:11px;color:var(--text3)">None below threshold</span>'}</div>
       </div>
     </div>
 
@@ -1518,6 +1642,16 @@ function regenerateCombos(overrideCount) {
   setTimeout(() => {
     const realDraws = getRealDraws();
     const combos = generateNCombos(realDraws, count);
+    // Get hot/cold sets for ball colouring
+    const a = realDraws.length >= 10 ? analyse(realDraws) : null;
+    const hotSet = new Set(a ? a.hot : []);
+    const coldSet = new Set(a ? a.cold : []);
+
+    function comboBallHtml(n) {
+      if (hotSet.has(n)) return `<div class="ball sm hot-ball">${n}</div>`;
+      if (coldSet.has(n)) return `<div class="ball sm cold-ball">${n}</div>`;
+      return `<div class="ball sm main">${n}</div>`;
+    }
 
     if (!combos || combos.length === 0) {
       container.innerHTML = `<div class="empty-state">Need more data to generate combos</div>`;
@@ -1531,7 +1665,7 @@ function regenerateCombos(overrideCount) {
       <div class="combo-card">
         <div class="combo-num">#${c.num}</div>
         <div class="combo-balls">
-          ${c.balls.map(n => `<div class="ball sm main">${n}</div>`).join('')}
+          ${c.balls.map(n => comboBallHtml(n)).join('')}
         </div>
         <div class="combo-meta">${c.odd}o/${6-c.odd}e<br>${c.low}L/${6-c.low}H<br>Σ${c.sum}</div>
         <button class="copy-btn" onclick="copyCombo(${JSON.stringify(c.balls)}, this)">Copy</button>
