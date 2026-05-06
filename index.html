@@ -735,6 +735,7 @@ function analyse(draws) {
   if (analysisCache && analysisCache.draws === key) return analysisCache;
 
   const freq = new Array(46).fill(0);
+  const suppFreq = new Array(46).fill(0); // supplementary frequency — separate pool
   const lastSeen = new Array(46).fill(Infinity);
   const pairs = {};
 
@@ -744,8 +745,9 @@ function analyse(draws) {
       freq[n]++;
       if (lastSeen[n] === Infinity) lastSeen[n] = i;
     });
-    // Track supps separately
-    d.supps.forEach(n => {
+    // Track supps — separate counter, never mixed into main freq
+    (d.supps || []).forEach(n => {
+      suppFreq[n]++;
       if (lastSeen[n] === Infinity) lastSeen[n] = i;
     });
     // Track pairs (main balls only)
@@ -800,7 +802,24 @@ function analyse(draws) {
     .slice(0,10)
     .map(g => g.num);
 
-  analysisCache = { freq, lastSeen, gaps, hot, cold, topPairs, overdue, freqRanked, avgGaps, draws: key };
+  // Supplementary profile — ranked by supp frequency
+  const suppRanked = Array.from({length:45}, (_,i) => ({num:i+1, suppCount:suppFreq[i+1], mainCount:freq[i+1]}))
+    .sort((a,b) => b.suppCount - a.suppCount);
+
+  // "Promotion candidates" — high supp freq AND rising main freq (above median)
+  const medianMain = freq.slice(1).sort((a,b)=>a-b)[22];
+  const promotionCandidates = suppRanked
+    .filter(x => x.suppCount > 0 && x.mainCount >= medianMain)
+    .slice(0, 8)
+    .map(x => x.num);
+
+  // "Supp-trapped" — high supp freq but low main freq (drawn but keeps missing top 6)
+  const suppTrapped = suppRanked
+    .filter(x => x.suppCount >= 3 && x.mainCount < medianMain)
+    .slice(0, 8)
+    .map(x => x.num);
+
+  analysisCache = { freq, suppFreq, lastSeen, gaps, hot, cold, topPairs, overdue, freqRanked, avgGaps, suppRanked, promotionCandidates, suppTrapped, draws: key };
   return analysisCache;
 }
 
@@ -826,6 +845,8 @@ function generatePrediction(draws) {
 
   // Score each number
   const scores = {};
+  const medMainExpected = n * 6 / 45;
+  const medSuppExpected = n * 2 / 45; // expected supp appearances per number
   for (let num = 1; num <= 45; num++) {
     // 1. Frequency score — how much above/below expected
     const freqRatio = a.freq[num] / expected;
@@ -840,7 +861,17 @@ function generatePrediction(draws) {
     // 3. Pair affinity
     const pairScore = a.topPairs.filter(p => p.nums.includes(num)).length * 5;
 
-    scores[num] = freqScore + gapScore + pairScore;
+    // 4. Supplementary signal — kept separate, small weight (10%)
+    // Promotion boost: number appears as supp more than expected → "almost there"
+    const suppRatio = a.suppFreq[num] / Math.max(medSuppExpected, 1);
+    const isMainWeak = a.freq[num] < medMainExpected; // low main frequency
+    // Only apply supp boost if main freq is also at least average (promotion candidate)
+    // Apply slight demotion if supp-trapped (high supp, low main = systematically missing)
+    let suppSignal = 0;
+    if (suppRatio > 1.3 && !isMainWeak) suppSignal = 5;   // promotion candidate: small boost
+    else if (suppRatio > 1.5 && isMainWeak) suppSignal = -3; // supp-trapped: slight downweight
+
+    scores[num] = freqScore + gapScore + pairScore + suppSignal;
   }
 
   // Sort candidates by score
@@ -1093,7 +1124,8 @@ function renderPrediction() {
         <strong>${p.overdueInPred.length}</strong> overdue vs personal average · 
         Balance: <strong>${p.oddCount} odd / ${6-p.oddCount} even</strong> · 
         <strong>${p.lowCount} low (1–22) / ${6-p.lowCount} high (23–45)</strong> · 
-        Sum: <strong>${p.ballSum}</strong> (historical mean: 137)
+        Sum: <strong>${p.ballSum}</strong> (historical mean: 137) ·
+        Supplementary signal applied (promotion candidates boosted, supp-trapped downweighted)
       </div>
     </div>
 
@@ -1307,6 +1339,37 @@ function renderAnalysis() {
         </div>
       `).join('')}
     </div>
+
+    <div class="section-label section-gap">Supplementary number profile</div>
+    <div class="freq-container" style="margin-bottom:12px">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.6">
+        Supplementaries are tracked <strong style="color:var(--text)">separately</strong> from main balls — they are not mixed into frequency analysis. Numbers below are ranked by how often they appear as the 7th or 8th ball drawn.
+      </div>
+      ${(() => {
+        const maxSupp = Math.max(...a.suppRanked.slice(0,15).map(x=>x.suppCount), 1);
+        return a.suppRanked.slice(0,15).map((x,i) => {
+          const pct = Math.round((x.suppCount / maxSupp) * 100);
+          return `<div class="gap-row">
+            <div class="gap-num">${x.num}</div>
+            <div class="gap-bar-container"><div class="gap-bar" style="width:${pct}%;background:var(--supp)"></div></div>
+            <div style="font-size:10px;color:var(--text3);width:52px;text-align:right;flex-shrink:0">${x.suppCount}× supp</div>
+          </div>`;
+        }).join('');
+      })()}
+    </div>
+
+    <div class="hc-grid" style="margin-bottom:20px">
+      <div class="hc-card">
+        <div class="hc-label" style="color:var(--supp)">⬆ Promotion candidates</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.5">High supp freq + solid main freq — "almost there" numbers</div>
+        <div class="hc-balls">${(a.promotionCandidates||[]).map(n=>`<div class="ball sm" style="border-color:var(--supp);color:var(--supp)">${n}</div>`).join('') || '<span style="font-size:11px;color:var(--text3)">Not enough data</span>'}</div>
+      </div>
+      <div class="hc-card">
+        <div class="hc-label" style="color:var(--text3)">🔒 Supp-trapped</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.5">High supp freq but low main freq — keeps narrowly missing top 6</div>
+        <div class="hc-balls">${(a.suppTrapped||[]).map(n=>`<div class="ball sm" style="border-color:var(--text3);color:var(--text3)">${n}</div>`).join('') || '<span style="font-size:11px;color:var(--text3)">Not enough data</span>'}</div>
+      </div>
+    </div>
   `;
 }
 
@@ -1386,6 +1449,20 @@ function checkNumbers() {
     if (recentMatches.length > 0) {
       html += `<br>Recent near-misses: `;
       html += recentMatches.map(m => `Draw #${m.draw} (${m.matches} matches)`).join(', ');
+    }
+
+    // Supplementary profile for selected numbers
+    const suppInfo = nums.map(n => {
+      const sc = a.suppFreq ? a.suppFreq[n] : 0;
+      return { n, sc };
+    }).filter(x => x.sc > 0).sort((a,b) => b.sc - a.sc);
+    if (suppInfo.length > 0) {
+      html += `<br><br><span style="color:var(--supp);font-size:11px">◆ Supplementary history:</span> `;
+      html += suppInfo.map(x => `<strong>${x.n}</strong> (${x.sc}× as supp)`).join(', ');
+      const suppTrapped = suppInfo.filter(x => a.suppFreq[x.n] >= 3 && a.freq[x.n] < (draws.length * 6 / 45));
+      if (suppTrapped.length > 0) {
+        html += `<br><span style="color:var(--text3);font-size:10px">Note: ${suppTrapped.map(x=>x.n).join(', ')} appear frequently as supplementaries but rarely as main balls (supp-trapped pattern)</span>`;
+      }
     }
 
     // Simple score
