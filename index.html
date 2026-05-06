@@ -308,17 +308,34 @@
   .combo-card {
     background: var(--surface); border: 1px solid var(--border2);
     border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
-    display: flex; align-items: center; gap: 8px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .combo-row1 {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .combo-row2 {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-left: 26px; /* align with balls, past the #N label */
   }
   .combo-num {
     font-family: 'DM Mono', monospace; font-size: 11px;
     color: var(--text3); width: 20px; flex-shrink: 0;
   }
-  .combo-balls { display: flex; gap: 5px; flex: 1; flex-wrap: wrap; }
-  .combo-meta { font-size: 10px; color: var(--text3); text-align: right; flex-shrink: 0; line-height: 1.6; }
+  .combo-balls {
+    display: flex; align-items: center; gap: 4px; flex: 1;
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+  }
+  .combo-balls::-webkit-scrollbar { display: none; }
+  /* Smaller balls in combo cards to fit 8 on one line */
+  .combo-balls .ball { width: 32px; height: 32px; font-size: 11px; flex-shrink: 0; }
+  .combo-meta {
+    font-size: 10px; color: var(--text3); line-height: 1.5;
+    display: flex; gap: 10px; align-items: center;
+  }
+  .combo-meta span { white-space: nowrap; }
   .copy-btn {
     background: transparent; border: 1px solid var(--border2);
-    color: var(--text3); border-radius: 6px; padding: 4px 8px;
+    color: var(--text3); border-radius: 6px; padding: 3px 8px;
     font-size: 10px; cursor: pointer; flex-shrink: 0;
     font-family: 'DM Sans', sans-serif; transition: all 0.15s;
   }
@@ -1150,13 +1167,26 @@ function generateNCombos(draws, count) {
     }
   }
 
-  return selected.map((combo, i) => ({
-    num: i + 1, balls: combo,
-    odd: combo.filter(x=>x%2!==0).length,
-    low: combo.filter(x=>x<=22).length,
-    sum: combo.reduce((a,b)=>a+b,0),
-    score: Math.round(comboScore(combo))
-  }));
+  return selected.map((combo, i) => {
+    // Predict 2 supps per combo using suppFreq + gap signal, excluding main balls
+    const suppScored = Array.from({length:45}, (_,idx) => idx+1)
+      .filter(n => !combo.includes(n))
+      .map(n => ({
+        n,
+        score: (a.suppFreq[n] / Math.max(draws.length * 2 / 45, 1)) * 50
+              + Math.min((a.lastSeen[n] === Infinity ? 0 : a.lastSeen[n]) / (a.avgGaps[n] || 7.5), 3) * 20
+      }))
+      .sort((a,b) => b.score - a.score);
+    const supps = suppScored.slice(0,2).map(x=>x.n).sort((a,b)=>a-b);
+
+    return {
+      num: i + 1, balls: combo, supps,
+      odd: combo.filter(x=>x%2!==0).length,
+      low: combo.filter(x=>x<=22).length,
+      sum: combo.reduce((a,b)=>a+b,0),
+      score: Math.round(comboScore(combo))
+    };
+  });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1663,12 +1693,22 @@ function regenerateCombos(overrideCount) {
 
     container.innerHTML = combos.map(c => `
       <div class="combo-card">
-        <div class="combo-num">#${c.num}</div>
-        <div class="combo-balls">
-          ${c.balls.map(n => comboBallHtml(n)).join('')}
+        <div class="combo-row1">
+          <div class="combo-num">#${c.num}</div>
+          <div class="combo-balls">
+            ${c.balls.map(n => comboBallHtml(n)).join('')}
+            <div style="width:1px;height:24px;background:var(--border2);margin:0 2px;flex-shrink:0;align-self:center"></div>
+            ${(c.supps||[]).map(n => `<div class="ball supp">${n}</div>`).join('')}
+          </div>
         </div>
-        <div class="combo-meta">${c.odd}o/${6-c.odd}e<br>${c.low}L/${6-c.low}H<br>Σ${c.sum}</div>
-        <button class="copy-btn" onclick="copyCombo(${JSON.stringify(c.balls)}, this)">Copy</button>
+        <div class="combo-row2">
+          <div class="combo-meta">
+            <span>${c.odd}o / ${6-c.odd}e</span>
+            <span>${c.low}L / ${6-c.low}H</span>
+            <span>Σ ${c.sum}</span>
+          </div>
+          <button class="copy-btn" onclick="copyCombo(${JSON.stringify(c.balls)}, this)">Copy</button>
+        </div>
       </div>
     `).join('');
 
